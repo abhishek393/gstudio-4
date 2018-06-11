@@ -15,16 +15,16 @@ def create(request):
             created_by=data.get('created_by'),
             last_update=data.get('last_update'))
         currunt_dir = os.getcwd()
-        path_to_data_dir = os.path.join(currunt_dir, '/data/')
+        path_to_data_dir = os.path.join(currunt_dir, '/data/node')
 
         try:
             create.version_id += 1
         except AttributeError:
             create.version_id = 0
 
-        json_file = open(path_to_data_dir + 'node_file_' + create.version_id + '.json', 'w+')
+        json_file = open(path_to_data_dir + 'node_file_' + create.version_id + '.json', 'a+')
         json_data = node_obj.get_json()
-        json_file.write(json_data)
+	json_file.write('POST data/node/' + '\n' + json_data)
         return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')
     else:
         return HttpResponse(
