@@ -4,7 +4,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from .models import Node
 from django.utils import timezone
-
+from elasticsearch import Elasticsearch
 
 def create(request):
     if request.method == 'POST':
@@ -32,10 +32,10 @@ def create(request):
 
 
 def read(request):
-    data = request.POST
-    version_id = data.get('version_id')
-
-    return HttpResponse(json.dumps({'TBD': 'TBD'}), content_type='application/json')
+    data = request.POST	
+	es = Elasticsearch()
+	searched_data = es.search(index='data', body={"query": {"match" : data }}
+	return HttpResponse(json.dumps(searched_data), content_type='application/json')
 
 
 def update(request):
