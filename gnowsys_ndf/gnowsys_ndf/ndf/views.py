@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, render
 from .models import Node
 from django.utils import timezone
 from elasticsearch import Elasticsearch
+es = Elasticsearch()
 
 def create(request):
     if request.method == 'POST':
@@ -19,10 +20,8 @@ def create(request):
             create.version_id += 1
         except AttributeError:
             create.version_id = 0
-        json_file = open(path_to_data_dir + 'file_' + str(create.version_id) + '.json', 'w+')
         json_data = node_obj.get_json()
-        json_file.write('POST data/node/' + '\n' + json_data)
-        json_file.close()
+        res = es.index(index="data", doc_type='node', id=create.version_id, body=json_data)
         return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')
     else:
         return HttpResponse(
@@ -31,8 +30,11 @@ def create(request):
 
 def read(request):
     data = request.POST
-    es = Elasticsearch()
-    searched_data = es.search(index='data', doc_type='node', body={'query': {'match': data }})
+    data_dict = dict(data)
+    json_query = {}
+    for key in data_dict.keys():
+        json_query[key] = data_dict[key][0]
+    searched_data = es.search(index='data', doc_type='node', body={'query': {'match': json_query}})
     return HttpResponse(json.dumps(searched_data), content_type='application/json')
 
 
@@ -41,4 +43,5 @@ def update(request):
 
 
 def delete(request):
+    
     pass
