@@ -29,38 +29,57 @@ def create(request):
 
 
 def read(request):
-	data = request.POST
-	data_dict = dict(data)
-	json_query = {}
-	for key in data_dict.keys():
-		json_query[key] = data_dict[key][0]
-	searched_data = es.search(index='data')
-	return HttpResponse(json.dumps(searched_data), content_type='application/json')
+    data = request.POST
+    data_dict = dict(data)
+    json_query = {}
+    for key in data_dict.keys():
+        json_query[key] = data_dict[key][0]
+    searched_data = es.search(index='data', doc_type='node', body={'query': {'match': json_query}})
+    return HttpResponse(json.dumps(searched_data), content_type='application/json')
 
 
 def update(request):
-	data = request.POST
-	data_dict = dict(data)
-	
-	json_query = {}
-	for key in data_dict.keys():
-		json_query[key] = data_dict[key][0]
-	for key_2 in json_query.keys():
-		value = json_query[key_2]
-	searched_list = value.split(",")
-	reqd_dict= {}
-	
-	for k in json_query.keys():
-		reqd_dict[k] = searched_list[0]
-		update_dict[k] = searched_list[1]
-	searched_data = es.search(index='data', doc_type='node', body={'query': {'match': reqd_dict}})
-	reqd_id = searched_data['hits']['hits'][0]['_id']
-	searched_data['hits']['hits'][0]['_source'][key_2] = searched_list[1]
-	return HttpResponse(json.dumps(searched_data), content_type='application/json')
-	
+    data = request.POST
+    data_dict = dict(data)   
+    json_query = {}
+    for key in data_dict.keys():
+        json_query[key] = data_dict[key][0]
+    for key_2 in json_query.keys():
+        value = json_query[key_2]
+    searched_list = value.split(",")
+    reqd_dict= {}
+    update_dict = {}
+    for k in json_query.keys():
+        reqd_dict[k] = searched_list[0]
+        update_dict[k] = searched_list[1]
+    searched_data = es.search(index='data', doc_type='node', body={'query': {'match': reqd_dict}})
+    reqd_id = []
+    for hit in searched_data['hits']['hits']:
+         reqd_id.append(hit['_id'])
+    i=0
+    for z in reqd_id:   
+        searched_data['hits']['hits'][i]['_source'][key_2] = searched_list[1]
+        res = es.index(index="data", doc_type='node', id= int(z), body=searched_data['hits']['hits'][i]['_source'])
+        i=i+1
+    return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')
 	
 
 
 def delete(request):
+    data = request.POST
+    data_dict = dict(data)
+    json_query = {}
+    for key in data_dict.keys():
+        json_query[key] = data_dict[key][0]
+    searched_data = es.search(index='data', doc_type='node', body={'query': {'match': json_query}})
+    reqd_id = []
+    for hit in searched_data['hits']['hits']:
+        reqd_id.append(hit['_id'])
+    for z in reqd_id:  
+        res = es.delete(index="data", doc_type='node', id= int(z))
+    return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')
+        
+
+
     
-    pass
+    
