@@ -1,0 +1,6 @@
+elasticsearch-6.2.4
+.vscode
+*.pyc
+*.json
+gnowsys_ndf/gnowsys_ndf/__pycache__/
+gnowsys_ndf/db.sqlite3
