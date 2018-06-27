@@ -23,7 +23,7 @@ class Node(models.Model):
         return json.dumps(json_rep)
 
     def create(self):
-        """Docstring to be added."""
+        """This function converts the Node object into a JSON file and indexes the JSON objects in the ElasticSearch server at the same instance so that it can be used by other operations. It returns a success or failure message depending on whether the operation is successful."""
         try:
             self.create.version_id += 1
         except AttributeError:
@@ -34,7 +34,8 @@ class Node(models.Model):
 
     @staticmethod
     def read(data):
-        """Docstring to be added."""
+        """This function receives a search query from the Client. It then fetches the search query and uses ElasticSearch to find the corresponding JSON object. The Read function then returns the JSON object found.
+"""
         data_dict = dict(data)
         json_query = {}
         for key in data_dict.keys():
@@ -44,45 +45,41 @@ class Node(models.Model):
 
     @staticmethod
     def update(data):
-        """Docstring to be added."""
+        """This function receives the field to be modified or updated,as { Key: Value } pairs from the Client.It then uses ElasticSearch to find the corresponding object and then updates the respective field. It returns a success or failure message depending on whether the operation is successful.
+ """
         data_dict = dict(data)
         json_query = {}
         for key in data_dict.keys():
             json_query[key] = data_dict[key][0]
-        key_2 = json_query.keys()[0]
-        value = json_query[key_2]
+        json_query_key = json_query.keys()[0]
+        value = json_query[json_query_key]
         searched_list = value.split(',')
         reqd_dict = {}
-        update_dict = {}
-
-        reqd_dict[key_2] = searched_list[0]
-        update_dict[key_2] = searched_list[1]
+        reqd_dict[json_query_key] = searched_list[0]
         searched_data = es.search(index='data', doc_type='node', body={'query': {'match': reqd_dict}})
-        reqd_id = []
+        searched_data_ids = []
         for hit in searched_data['hits']['hits']:
-            reqd_id.append(hit['_id'])
-        i = 0
-        for z in reqd_id:
-            searched_data['hits']['hits'][i]['_source'][key_2] = searched_list[1]
+            searched_data_ids.append(hit['_id'])
+        for counter,data_id in enumerate(searched_data_ids,0):
+            searched_data['hits']['hits'][i]['_source'][json_query_key] = searched_list[1]
             res = es.index(
                 index="data",
                 doc_type='node',
-                id=int(z),
-                body=searched_data['hits']['hits'][i]['_source'])
-            i = i + 1
+                id=int(data_id),
+                body=searched_data['hits']['hits'][counter]['_source'])
         return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')
 
     @staticmethod
     def delete(data):
-        """Docstring to be added."""
+        """This function receives a criteria for which the JSON object has to be deleted, as { Key: Value } pairs. It uses ElasticSearch server to find all the files which match the criteria and then deletes it from the ElasticSearch index. It returns a success or failure message depending on whether the operation is successful"""
         data_dict = dict(data)
         json_query = {}
         for key in data_dict.keys():
             json_query[key] = data_dict[key][0]
         searched_data = es.search(index='data', doc_type='node', body={'query': {'match': json_query}})
-        reqd_id = []
+        searched_data_ids = []
         for hit in searched_data['hits']['hits']:
-            reqd_id.append(hit['_id'])
-        for z in reqd_id:
-            res = es.delete(index="data", doc_type='node', id= int(z))
+            searched_data_ids.append(hit['_id'])
+        for data_id in searched_data_ids:
+            res = es.delete(index="data", doc_type='node', id= int(data_id))
         return HttpResponse(json.dumps({'SUCCESS': 'SUCCESS'}), content_type='application/json')

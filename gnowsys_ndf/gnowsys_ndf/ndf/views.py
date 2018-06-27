@@ -2,7 +2,7 @@ from models.node import Node
 
 
 def create(request):
-    """Docstring to be added."""
+    """This function receives a request from the Client, fetches the fields provided in the request body and then creates a Node object.The created Node object after being converted into JSON file is indexed in the ElasticSearch server """
     if request.method == 'POST':
         data = request.POST
         node_obj = Node(
@@ -19,15 +19,15 @@ def create(request):
 
 
 def read(request):
-    """Docstring to be added."""
+    """This function receives a request, uses ElasticSearch to find the corresponding JSON object and returns the JSON object found"""
     return Node.read(request.POST)
 
 
 def update(request):
-    """Docstring to be added."""
+    """This function receives a request and uses ElasticSearch to find the corresponding object and then updates the respective fields"""
     return Node.update(request.POST)
 
 
 def delete(request):
-    """Docstring to be added."""
+    """This function receives a request and uses ElasticSearch to find all the files that matches the criteria and then removes them from ElasticSearch server"""
     return Node.delete(request.POST)
