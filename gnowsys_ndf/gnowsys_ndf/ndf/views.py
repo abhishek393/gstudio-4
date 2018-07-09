@@ -1,6 +1,7 @@
 from .models.node import Node
 from django.http import HttpResponse
 import json
+import datetime
 
 def create(request):
     """This function receives a request from the Client,
@@ -11,9 +12,9 @@ def create(request):
         data = request.POST
         node_obj = Node(
             name=data.get('name'),
-            created_at=data.get('created_at'),
+            created_at=str(datetime.datetime.now()),
             created_by=data.get('created_by'),
-            last_update=data.get('last_update'))
+            last_update=str(datetime.datetime.now()))
         # TODO: Integrate RCS when creating a node object.
         result = node_obj.create()
         return HttpResponse(json.dumps(result), content_type='application/json')

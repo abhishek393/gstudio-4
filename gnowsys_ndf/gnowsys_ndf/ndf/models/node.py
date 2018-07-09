@@ -1,18 +1,16 @@
 import json
 import uuid
 from django.db import models
-from django.http import HttpResponse
+from django.http import HttpResponse,HttpRequest
 from elasticsearch import Elasticsearch
-from base_imports import *
-from past.builtins import basestring # pip install future
-from future.utils import python_2_unicode_compatible
-
+#from past.builtins import basestring # pip install future
+#from future.utils import python_2_unicode_compatible
+import datetime
 
 es = Elasticsearch()
 
-@connection.register
 class Node(models.Model):
- '''Everything is a Node.  Other classes should inherit this Node class.
+    '''Everything is a Node.  Other classes should inherit this Node class.
 
     According to the specification of GNOWSYS, all nodes, including
     types, metatypes and members of types, edges of nodes, should all
@@ -39,11 +37,9 @@ class Node(models.Model):
 
     Nodes are publisehed in one group or another, or in more than one
     group. The groups in which a node is publisehed is expressed in
-    group_set.
-
-    '''
+    group_set.''' 
     objects = models.Manager()
-
+    ObjectId = None
     collection_name = 'Nodes'
     structure = {
         '_type': str, # check required: required field, Possible
@@ -56,7 +52,7 @@ class Node(models.Model):
         'post_node': [ObjectId],
 
         # 'language': unicode,  # previously it was unicode.
-        'language': (basestring, basestring),  # Tuple are converted into a simple list
+        'language': (str, str),  # Tuple are converted into a simple list
                                                # ref: https://github.com/namlook/mongokit/wiki/Structure#tuples
 
         'type_of': [ObjectId], # check required: only ObjectIDs of GSystemType
@@ -101,17 +97,16 @@ class Node(models.Model):
       	'login_required': bool,
       	# 'password': basestring,
 
-        'status': STATUS_CHOICES_TU,
+        #'status': STATUS_CHOICES_TU,
         'rating':[{'score':int,
                   'user_id':int,
-                  'ip_address':basestring}],
+                  'ip_address':str}],
         'snapshot':dict
     }
 
     required_fields = ['name', '_type', 'created_by'] # 'group_set' to be included
                                         # here after the default
-                                        # 'Admini
-ation' group is
+                                        # 'Adminiation' group is
                                         # ready.
     default_values = {
                         'name': u'',
@@ -157,9 +152,14 @@ ation' group is
     """The basic model for all objects."""
     # TODO(@vickysingh17): Add all fields in the node model.
     name = models.CharField(max_length=50)
-    created_at = models.CharField(max_length=50)
+    created_at = models.DateTimeField()
     created_by = models.CharField(max_length=30)
-    last_update = models.CharField(max_length=50)
+    last_update = models.DateTimeField()
+    altnames = models.CharField(max_length=50)
+    plural = models.CharField(max_length=30)
+    language = models.CharField(max_length=50)
+    access_policy = models.CharField(max_length=50) 
+    modified_by = models.CharField(max_length=30)
 
     def get_json(self):
         """Converts the object into json."""
@@ -172,6 +172,7 @@ ation' group is
 
     def __get_id(self):
         self.object_id = uuid.uuid4()
+        ObjectId = self.object_id
 
     def create(self):
         """This function converts the Node object into a JSON file and
@@ -222,6 +223,7 @@ ation' group is
             searched_data_ids.append(hit['_id'])
         for counter, data_id in enumerate(searched_data_ids):
             searched_data['hits']['hits'][counter]['_source'][json_query_keys[0]] = searched_list[1]
+            searched_data['hits']['hits'][counter]['_source']['last_update'] = datetime.datetime.now()
             res = es.index(
                 index="data",
                 doc_type='node',
