@@ -156,6 +156,7 @@ class Node(models.Model):
     language = models.CharField(max_length=50)
     access_policy = models.CharField(max_length=50) 
     modified_by = models.CharField(max_length=30)
+    object_id = models.CharField(max_length=64)
 
     def get_json(self):
         """Converts the object into json."""
@@ -169,11 +170,12 @@ class Node(models.Model):
         json_rep['language'] = self.language
         json_rep['access_policy'] = self.access_policy
         json_rep['modified_by'] = self.modified_by
+        json_rep['object_id'] = self.object_id
         return json.dumps(json_rep)
 
     def __get_id(self):
         """This function creates a unique ID of a Node object."""
-        self.object_id = uuid.uuid4()
+        self.object_id = str(uuid.uuid4())
 
     def create(self):
         """This function converts the Node object into a JSON file and
@@ -182,8 +184,8 @@ class Node(models.Model):
             It returns a success or failure message depending on whether
             the operation is successful."""
         self.last_update = self.created_at = datetime.datetime.now()
-        json_data = self.get_json()
         self.__get_id()
+        json_data = self.get_json()
         result = es.index(index="data", doc_type='node', id=self.object_id, body=json_data)
         return result
 
