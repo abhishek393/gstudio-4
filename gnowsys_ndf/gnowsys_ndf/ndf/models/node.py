@@ -37,9 +37,8 @@ class Node(models.Model):
 
     Nodes are publisehed in one group or another, or in more than one
     group. The groups in which a node is publisehed is expressed in
-    group_set.''' 
+    group_set.'''
     objects = models.Manager()
-    ObjectId = None
     collection_name = 'Nodes'
     structure = {
         '_type': str, # check required: required field, Possible
@@ -48,15 +47,13 @@ class Node(models.Model):
         'name': str,
         'altnames': str,
         'plural': str,
-        'prior_node': [ObjectId],
-        'post_node': [ObjectId],
+        'prior_node': [uuid.UUID],
+        'post_node': [uuid.UUID],
 
-        # 'language': unicode,  # previously it was unicode.
-        'language': (str, str),  # Tuple are converted into a simple list
-                                               # ref: https://github.com/namlook/mongokit/wiki/Structure#tuples
-
-        'type_of': [ObjectId], # check required: only ObjectIDs of GSystemType
-        'member_of': [ObjectId], # check required: only ObjectIDs of
+        # 'language': unicode, # previously it was unicode.
+        'language': (str, str), # Tuple are converted into a simple list
+        'type_of': [uuid.UUID], # check required: only ObjectIDs of GSystemType
+        'member_of': [uuid.UUID], # check required: only ObjectIDs of
                                  # GSystemType for GSystems, or only
                                  # ObjectIDs of MetaTypes for
                                  # GSystemTypes
@@ -78,11 +75,11 @@ class Node(models.Model):
         'content': str,
         'content_org': str,
 
-        'group_set': [ObjectId], # check required: should not be
+        'group_set': [uuid.UUID], # check required: should not be
                                  # empty. For type nodes it should be
                                  # set to a Factory Group called
                                  # Administration
-        'collection_set': [ObjectId],  # check required: to exclude
+        'collection_set': [uuid.UUID],  # check required: to exclude
                                        # parent nodes as children, use
                                        # MPTT logic
         'property_order': [],  # Determines the order & grouping in
@@ -99,8 +96,8 @@ class Node(models.Model):
 
         #'status': STATUS_CHOICES_TU,
         'rating':[{'score':int,
-                  'user_id':int,
-                  'ip_address':str}],
+                   'user_id':int,
+                   'ip_address':str}],
         'snapshot':dict
     }
 
@@ -150,7 +147,6 @@ class Node(models.Model):
     use_dot_notation = True
 
     """The basic model for all objects."""
-    # TODO(@vickysingh17): Add all fields in the node model.
     name = models.CharField(max_length=50)
     created_at = models.DateTimeField()
     created_by = models.CharField(max_length=30)
@@ -165,14 +161,19 @@ class Node(models.Model):
         """Converts the object into json."""
         json_rep = {}
         json_rep['name'] = self.name
-        json_rep['created_at'] = self.created_at
+        json_rep['created_at'] = str(self.created_at)
         json_rep['created_by'] = self.created_by
-        json_rep['last_update'] = self.last_update
+        json_rep['last_update'] = str(self.last_update)
+        json_rep['altnames'] = self.altnames
+        json_rep['plural'] = self.plural
+        json_rep['language'] = self.language
+        json_rep['access_policy'] = self.access_policy
+        json_rep['modified_by'] = self.modified_by
         return json.dumps(json_rep)
 
     def __get_id(self):
+        """This function creates a unique ID of a Node object."""
         self.object_id = uuid.uuid4()
-        ObjectId = self.object_id
 
     def create(self):
         """This function converts the Node object into a JSON file and
@@ -180,7 +181,7 @@ class Node(models.Model):
             same instance so that it can be used by other operations.
             It returns a success or failure message depending on whether
             the operation is successful."""
-
+        self.last_update = self.created_at = datetime.datetime.now()
         json_data = self.get_json()
         self.__get_id()
         result = es.index(index="data", doc_type='node', id=self.object_id, body=json_data)
@@ -223,7 +224,7 @@ class Node(models.Model):
             searched_data_ids.append(hit['_id'])
         for counter, data_id in enumerate(searched_data_ids):
             searched_data['hits']['hits'][counter]['_source'][json_query_keys[0]] = searched_list[1]
-            searched_data['hits']['hits'][counter]['_source']['last_update'] = datetime.datetime.now()
+            searched_data['hits']['hits'][counter]['_source']['last_update'] = str(datetime.datetime.now())
             res = es.index(
                 index="data",
                 doc_type='node',
@@ -278,11 +279,11 @@ class Node(models.Model):
             if 'contributors' not in values_dict:
                 values_dict.update({'contributors': add_to_list(self.contributors, user_id)})
 
-        if 'member_of' in values_dict  and not isinstance(values_dict['member_of'], ObjectId):
+        if 'member_of' in values_dict  and not isinstance(values_dict['member_of'], uuid.UUID):
             from gsystem_type import GSystemType
             gst_node = GSystemType.get_gst_name_id(values_dict['member_of'])
             if gst_node:
-                values_dict.update({'member_of': ObjectId(gst_node[1])})
+                values_dict.update({'member_of': uuid.UUID(gst_node[1])})
 
         # filter keys from values dict there in node structure.
         node_str = Node.structure
@@ -307,8 +308,8 @@ class Node(models.Model):
             Takes ObjectId or objectId as string as arg
                 and return object
         '''
-        if node_id and (isinstance(node_id, ObjectId) or ObjectId.is_valid(node_id)):
-            return node_collection.one({'_id': ObjectId(node_id)})
+        if node_id and (isinstance(node_id, uuid.UUID)):
+            return node_collection.one({'_id': uuid.UUID(node_id)})
         else:
             # raise ValueError('No object found with id: ' + str(node_id))
             return None
@@ -320,9 +321,9 @@ class Node(models.Model):
                 and return list of object
         '''
         try:
-            node_id_list = map(ObjectId, node_id_list)
+            node_id_list = map(uuid.UUID, node_id_list)
         except:
-            node_id_list = [ObjectId(nid) for nid in node_id_list if nid]
+            node_id_list = [uuid.UUID(nid) for nid in node_id_list if nid]
         if node_id_list:
             return node_collection.find({'_id': {'$in': node_id_list}})
         else:
@@ -337,8 +338,8 @@ class Node(models.Model):
 
         if isinstance(node_obj_or_id, expected_type):
             node_obj = node_obj_or_id
-        elif isinstance(node_obj_or_id, ObjectId) or ObjectId.is_valid(node_obj_or_id):
-            node_obj = node_collection.one({'_id': ObjectId(node_obj_or_id)})
+        elif isinstance(node_obj_or_id, uuid.UUID):
+            node_obj = node_collection.one({'_id': uuid.UUID(node_obj_or_id)})
         else:
             # error raised:
             raise RuntimeError('No Node class instance found with provided arg for get_node_obj_from_id_or_obj(' + str(node_obj_or_id) + ', expected_type=' + str(expected_type) + ')')
@@ -375,10 +376,10 @@ class Node(models.Model):
 
             if cache_result:
                 # todo:  return OID after casting
-                return (cache_result[0], ObjectId(cache_result[1]))
+                return (cache_result[0], uuid.UUID(cache_result[1]))
             # ---------------------------------
 
-        node_id = ObjectId(node_name_or_id) if ObjectId.is_valid(node_name_or_id) else None
+        node_id = uuid.UUID(node_name_or_id) if isinstance(node_name_or_id, uuid.UUID) else None
         node_obj = node_collection.one({
                                         "_type": {"$in": [
                                                 # "GSystemType",
@@ -494,7 +495,7 @@ class Node(models.Model):
             i = i + 1
 
             if each_id != self._id:
-                node_collection_object = node_collection.one({"_id": ObjectId(each_id)})
+                node_collection_object = node_collection.one({"_id": uuid.UUID(each_id)})
                 dict_key = i
                 dict_value = node_collection_object
 
@@ -517,7 +518,7 @@ class Node(models.Model):
             i = i + 1
 
             if each_id != self._id:
-                node_collection_object = node_collection.one({"_id": ObjectId(each_id)})
+                node_collection_object = node_collection.one({"_id": uuid.UUID(each_id)})
                 dict_key = i
                 dict_value = node_collection_object
 
@@ -558,4 +559,3 @@ class Node(models.Model):
         """
         history_manager = HistoryManager()
         return history_manager.get_version_dict(self)
-
