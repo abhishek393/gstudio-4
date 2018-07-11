@@ -229,9 +229,9 @@ As you can see, the `hits` field is now empty, which indicates that there are no
 3. Increase the test coverage to around 100% for the codebase. This is an important step to release this app as an independent PyPI package.
 
 ## Team:
-Apurv -- [@apb7](https://github.com/apb7)
-Abhishek -- [@abhishek393](https://github.com/abhishek393)
-Vikram -- [@vickysingh17](https://github.com/vickysingh17)
+Abhishek -- [@abhishek393](https://github.com/abhishek393)  
+Apurv -- [@apb7](https://github.com/apb7)  
+Vikram -- [@vickysingh17](https://github.com/vickysingh17)  
 
 ## References:
 #### Source code for MongoDB ObjectId:
